@@ -18,127 +18,345 @@ import io
 import streamlit as st
 from graph import agent, save_files
 
-# --- Page Config ---
 st.set_page_config(
-    page_title="Auto Code Builder",
-    page_icon="💻",
+    page_title="CodeForge AI",
+    page_icon="⚡",
     layout="wide"
 )
 
-# --- Custom UI Styling ---
 st.markdown("""
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 .stApp {
-    background: linear-gradient(135deg, #0f172a, #1e293b);
-    color: #e2e8f0;
-    font-family: 'Segoe UI', sans-serif;
+    background-color: #0a0a0a;
+    background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    font-family: 'Syne', sans-serif;
+    color: #f0f0f0;
 }
-.block-container { max-width: 1100px; padding-top: 2rem; }
-.main-title {
-    text-align: center; font-size: 48px; font-weight: 700;
-    color: #38bdf8; margin-bottom: 10px;
+
+.block-container {
+    max-width: 1000px !important;
+    padding: 3rem 2rem !important;
 }
-.subtitle {
-    text-align: center; font-size: 18px;
-    color: #94a3b8; margin-bottom: 30px;
+
+/* ── Header ── */
+.forge-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 3.5rem;
+    border-left: 4px solid #e8ff47;
+    padding-left: 1.5rem;
 }
-.card {
-    background: #1e293b; padding: 25px; border-radius: 18px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.35); margin-bottom: 20px;
+.forge-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: #e8ff47;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
 }
-.stButton>button {
-    background: linear-gradient(90deg, #38bdf8, #6366f1);
-    color: white; border-radius: 12px; height: 50px; width: 100%;
-    font-size: 17px; font-weight: 600; border: none; transition: 0.3s;
+.forge-title {
+    font-size: clamp(42px, 7vw, 72px);
+    font-weight: 800;
+    line-height: 1;
+    color: #f0f0f0;
+    letter-spacing: -2px;
 }
-.stButton>button:hover {
-    transform: scale(1.02);
-    background: linear-gradient(90deg, #0ea5e9, #4f46e5);
+.forge-title span {
+    color: #e8ff47;
 }
-textarea { border-radius: 12px !important; padding: 10px !important; }
-.streamlit-expanderHeader { font-size: 17px; font-weight: 600; color: #38bdf8; }
-pre { border-radius: 10px !important; }
+.forge-sub {
+    margin-top: 0.75rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: #666;
+    letter-spacing: 0.5px;
+}
+
+/* ── Input panel ── */
+.panel {
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 2px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+.panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 40px; height: 3px;
+    background: #e8ff47;
+}
+.panel-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: #555;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+}
+
+/* ── Streamlit overrides ── */
+.stTextArea textarea {
+    background: #0a0a0a !important;
+    border: 1px solid #333 !important;
+    border-radius: 2px !important;
+    color: #f0f0f0 !important;
+    font-family: 'Space Mono', monospace !important;
+    font-size: 13px !important;
+    padding: 1rem !important;
+    resize: vertical !important;
+}
+.stTextArea textarea:focus {
+    border-color: #e8ff47 !important;
+    box-shadow: 0 0 0 1px #e8ff47 !important;
+}
+.stTextArea label { display: none !important; }
+
+.stButton > button {
+    background: #e8ff47 !important;
+    color: #0a0a0a !important;
+    border: none !important;
+    border-radius: 2px !important;
+    font-family: 'Syne', sans-serif !important;
+    font-weight: 700 !important;
+    font-size: 15px !important;
+    letter-spacing: 1px !important;
+    height: 52px !important;
+    width: 100% !important;
+    text-transform: uppercase !important;
+    transition: all 0.15s ease !important;
+    cursor: pointer !important;
+}
+.stButton > button:hover {
+    background: #f5ff8a !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 20px rgba(232, 255, 71, 0.25) !important;
+}
+.stButton > button:active {
+    transform: translateY(0) !important;
+}
+
+/* ── Success / error ── */
+.stSuccess {
+    background: #0f1a00 !important;
+    border: 1px solid #e8ff47 !important;
+    border-radius: 2px !important;
+    color: #e8ff47 !important;
+}
+.stAlert { border-radius: 2px !important; }
+
+/* ── Stats bar ── */
+.stats-bar {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 2rem;
+}
+.stat-chip {
+    background: #111;
+    border: 1px solid #222;
+    padding: 0.6rem 1.2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: #555;
+    flex: 1;
+    text-align: center;
+}
+.stat-chip b {
+    display: block;
+    font-size: 18px;
+    color: #e8ff47;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+}
+
+/* ── Output section ── */
+.section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: #555;
+    text-transform: uppercase;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #1a1a1a;
+    margin-bottom: 1.5rem;
+}
+
+/* ── Expanders ── */
+.streamlit-expanderHeader {
+    background: #111 !important;
+    border: 1px solid #222 !important;
+    border-radius: 2px !important;
+    font-family: 'Space Mono', monospace !important;
+    font-size: 12px !important;
+    color: #aaa !important;
+    padding: 0.75rem 1rem !important;
+}
+.streamlit-expanderHeader:hover {
+    border-color: #e8ff47 !important;
+    color: #e8ff47 !important;
+}
+.streamlit-expanderContent {
+    background: #0d0d0d !important;
+    border: 1px solid #1a1a1a !important;
+    border-top: none !important;
+}
+
+/* ── Code blocks ── */
+.stCodeBlock {
+    border-radius: 2px !important;
+}
+pre {
+    background: #0a0a0a !important;
+    border: 1px solid #1a1a1a !important;
+    border-radius: 2px !important;
+    font-family: 'Space Mono', monospace !important;
+    font-size: 12px !important;
+}
+
+/* ── Download button ── */
+.stDownloadButton > button {
+    background: transparent !important;
+    border: 1px solid #e8ff47 !important;
+    color: #e8ff47 !important;
+    border-radius: 2px !important;
+    font-family: 'Syne', sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+    width: 100% !important;
+    height: 48px !important;
+    transition: all 0.15s ease !important;
+}
+.stDownloadButton > button:hover {
+    background: #e8ff47 !important;
+    color: #0a0a0a !important;
+}
+
+/* ── Spinner ── */
+.stSpinner > div { border-top-color: #e8ff47 !important; }
+
+/* ── Tips expander ── */
+.tips-wrap .streamlit-expanderHeader {
+    color: #555 !important;
+    font-size: 11px !important;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: #111; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #e8ff47; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- Header ---
-st.markdown('<div class="main-title">💻 Auto Code Builder</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">Turn your idea into working code instantly</div>', unsafe_allow_html=True)
+# ── Header ──
+st.markdown("""
+<div class="forge-header">
+    <div class="forge-tag">// AI-Powered · Multi-Agent · LangGraph</div>
+    <div class="forge-title">Code<span>Forge</span></div>
+    <div class="forge-sub">describe an idea → get a full project in seconds</div>
+</div>
+""", unsafe_allow_html=True)
 
-# --- API Key Check ---
+# ── API Key Check ──
 api_key_present = bool(os.environ.get("GROQ_API_KEY", ""))
 if not api_key_present:
-    st.error(
-        "⚠️ **GROQ_API_KEY is not set.**\n\n"
-        "Go to your Streamlit Cloud app → **Settings → Secrets** and add:\n"
-        "```\nGROQ_API_KEY = \"your_key_here\"\n```"
-    )
+    st.error("⚠️ GROQ_API_KEY is not set. Go to App Settings → Secrets and add: GROQ_API_KEY = \"your_key\"")
     st.stop()
 
-# --- Input Card ---
-st.markdown('<div class="card">', unsafe_allow_html=True)
+# ── Input Panel ──
+st.markdown('<div class="panel"><div class="panel-label">// Your idea</div>', unsafe_allow_html=True)
 user_prompt = st.text_area(
-    "📝 Describe your project",
-    placeholder="Example: Build a todo app with FastAPI backend and React frontend...",
-    height=180
+    "prompt",
+    placeholder="e.g. Build a REST API with FastAPI and SQLite for a bookstore with full CRUD operations...",
+    height=160,
+    label_visibility="collapsed"
 )
-generate_btn = st.button("🚀 Generate Code")
 st.markdown('</div>', unsafe_allow_html=True)
 
-with st.expander("💡 Tips for better results"):
-    st.write("""
-    - Be clear about features you want
-    - Mention the tech stack (Python, React, FastAPI, etc.)
-    - Add constraints (simple UI, REST API, SQLite DB, etc.)
+generate_btn = st.button("⚡ Forge Project")
+
+with st.expander("── tips for better output"):
+    st.markdown("""
+```
+✦ name the tech stack  →  FastAPI, React, SQLite...
+✦ list key features    →  auth, CRUD, search...
+✦ set constraints      →  no external DB, simple UI...
+✦ be specific          →  more detail = better code
+```
     """)
 
+# ── ZIP helper ──
 def create_zip(files: dict) -> bytes:
-    buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        for filename, content in files.items():
-            zf.writestr(filename, content)
-    return buffer.getvalue()
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for name, content in files.items():
+            zf.writestr(name, content)
+    return buf.getvalue()
 
+# ── Generation ──
 if generate_btn:
     if not user_prompt.strip():
-        st.warning("⚠️ Please enter a project description.")
+        st.warning("Enter a project description first.")
     else:
-        with st.spinner("⚙️ Generating your project... This may take 30–60 seconds."):
+        with st.spinner("Forging your project..."):
             try:
                 result = agent.invoke({"user_prompt": user_prompt.strip()})
-                plan = result.get("plan", "")
-                task_plan = result.get("task_plan", "")
+                plan       = result.get("plan", "")
+                task_plan  = result.get("task_plan", "")
                 code_files = result.get("code_files", {})
 
                 if not code_files:
-                    st.error("❌ No files were generated. Try rephrasing your prompt.")
+                    st.error("No files generated. Try rephrasing your prompt.")
                 else:
                     save_files(code_files)
-                    st.success(f"✅ Generated {len(code_files)} file(s) successfully!")
+                    n = len(code_files)
 
-                    st.markdown('<div class="card">', unsafe_allow_html=True)
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        with st.expander("📌 Project Plan"):
+                    # ── Stats ──
+                    st.markdown(f"""
+                    <div class="stats-bar">
+                        <div class="stat-chip"><b>{n}</b>files generated</div>
+                        <div class="stat-chip"><b>3</b>agents used</div>
+                        <div class="stat-chip"><b>✓</b>ready to run</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    # ── Plan + Architecture ──
+                    st.markdown('<div class="section-title">// pipeline output</div>', unsafe_allow_html=True)
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        with st.expander("01 · planner output"):
                             st.write(plan)
-                    with col2:
-                        with st.expander("🧩 Architecture"):
+                    with c2:
+                        with st.expander("02 · architect output"):
                             st.write(task_plan)
 
-                    st.markdown("### 📂 Generated Files")
-                    for filename, content in code_files.items():
-                        with st.expander(f"📄 {filename}"):
-                            ext = filename.rsplit(".", 1)[-1] if "." in filename else "text"
+                    # ── Files ──
+                    st.markdown('<div class="section-title">// generated files</div>', unsafe_allow_html=True)
+                    for i, (filename, content) in enumerate(code_files.items(), 1):
+                        ext = filename.rsplit(".", 1)[-1] if "." in filename else "text"
+                        with st.expander(f"{i:02d} · {filename}"):
                             st.code(content, language=ext)
 
-                    zip_bytes = create_zip(code_files)
+                    # ── Download ──
+                    st.markdown('<div class="section-title">// export</div>', unsafe_allow_html=True)
                     st.download_button(
-                        label="📦 Download All Files as ZIP",
-                        data=zip_bytes,
-                        file_name="generated_project.zip",
+                        label="↓ Download ZIP",
+                        data=create_zip(code_files),
+                        file_name="codeforge_project.zip",
                         mime="application/zip"
                     )
-                    st.markdown('</div>', unsafe_allow_html=True)
 
             except Exception as e:
-                st.error(f"❌ Generation Error: {e}")
+                st.error(f"Error: {e}")
