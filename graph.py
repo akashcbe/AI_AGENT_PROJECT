@@ -15,7 +15,7 @@ def get_llm():
     api_key = None
     try:
         import streamlit as st
-        api_key = st.secrets.get("GROQ_API_KEY")
+        api_key = st.secrets.get("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")
     except Exception:
         pass
 
